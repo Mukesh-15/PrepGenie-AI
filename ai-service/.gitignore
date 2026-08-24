@@ -1,0 +1,4 @@
+# Logs
+.env
+chroma_db
+venv
