@@ -72,19 +72,7 @@ def evaluate_answer(
     category: str = "",
     context_used: str = ""
 ) -> AnswerEvaluation:
-    """
-    Evaluate a candidate's answer using the rubric-based evaluator LLM.
-
-    Args:
-        session_id: Resume session ID for retrieving context
-        question: The interview question that was asked
-        answer: The candidate's answer
-        category: Question category (for context retrieval)
-        context_used: The resume context the question was based on
-
-    Returns:
-        AnswerEvaluation with scores, strengths, weaknesses, feedback
-    """
+    
     # Retrieve relevant resume context for fact-checking the answer
     search_query = f"{category} {question}" if category else question
     resume_context = retrieve_context(session_id, search_query, k=3)
