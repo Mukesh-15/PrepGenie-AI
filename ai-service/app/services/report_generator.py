@@ -57,19 +57,6 @@ Analyze ALL the evaluations above and generate a comprehensive report:
 
 
 def generate_report(evaluations: list[dict]) -> FinalReport:
-    """
-    Generate a final interview report from all evaluations.
-
-    Args:
-        evaluations: List of evaluation dicts, each containing:
-            - question, answer, category
-            - technical_score, communication_score, problem_solving_score, overall_score
-            - strengths, weaknesses, feedback
-
-    Returns:
-        FinalReport with aggregated scores, analysis, and recommendations
-    """
-    # Format evaluations into readable text for the LLM
     evaluations_text = ""
     for i, eval_data in enumerate(evaluations, 1):
         evaluations_text += f"\n{'='*50}\n"

@@ -24,7 +24,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount main interview routes
 app.include_router(interviews.router)
 
 
