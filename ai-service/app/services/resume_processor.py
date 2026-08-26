@@ -67,6 +67,7 @@ def process_resume(file_path: str) -> dict:
     logger.info(f"Extracted {len(pages)} pages, {len(full_text)} characters total")
 
     # Step 2: Split into chunks
+    
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200,
