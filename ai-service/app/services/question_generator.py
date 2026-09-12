@@ -83,7 +83,7 @@ def generate_question(session_id: str, interview_history: list[dict] = None) -> 
         last_score = last_eval.get("overall_score", 10)
 
         if last_score <= 5:
-            # Weak answer → follow up on the same topic
+            # Weak answer -> follow up on the same topic
             adaptive_instructions = FOLLOW_UP_INSTRUCTIONS.format(
                 score=last_score,
                 previous_category=last_entry.get("category", "unknown"),
@@ -91,7 +91,7 @@ def generate_question(session_id: str, interview_history: list[dict] = None) -> 
             )
             search_query = last_entry.get("category", "skills")
         else:
-            # Strong answer → move to a new topic
+            # Strong answer -> move to a new topic
             covered = [entry.get("category", "") for entry in interview_history]
             adaptive_instructions = NEXT_TOPIC_INSTRUCTIONS.format(
                 covered_categories=", ".join(covered)
