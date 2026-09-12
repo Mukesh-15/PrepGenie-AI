@@ -33,16 +33,24 @@ class AnswerEvaluation(BaseModel):
     follow_up_suggestion: str = Field(default="", description="Follow-up question if answer was weak")
 
 
+class ReportAnalysis(BaseModel):
+    """Text-only LLM output for the report — scores are computed in Python, not by the LLM."""
+    strong_areas: list[str] = Field(default_factory=list, description="Topics where the candidate clearly excelled")
+    weak_areas: list[str] = Field(default_factory=list, description="Topics where the candidate struggled")
+    recommended_learning: list[str] = Field(default_factory=list, description="Specific topics to study for improvement")
+    overall_feedback: str = Field(description="3-5 sentence narrative summary of the candidate's overall performance")
+
+
 class FinalReport(BaseModel):
-    """Schema for the final comprehensive performance report."""
-    overall_score: int = Field(ge=0, le=100, description="Aggregated overall score (0-100)")
-    technical_score: int = Field(ge=0, le=100, description="Technical score (0-100)")
-    communication_score: int = Field(ge=0, le=100, description="Communication score (0-100)")
-    problem_solving_score: int = Field(ge=0, le=100, description="Problem solving score (0-100)")
-    strong_areas: list[str] = Field(default_factory=list, description="Key competencies and strong skills")
-    weak_areas: list[str] = Field(default_factory=list, description="Topics that need improvement")
-    recommended_learning: list[str] = Field(default_factory=list, description="Suggested study topics or resources")
-    overall_feedback: str = Field(description="Comprehensive final feedback summary")
+    """Complete final report returned to the frontend."""
+    overall_score: int
+    technical_score: int
+    communication_score: int
+    problem_solving_score: int
+    strong_areas: list[str]
+    weak_areas: list[str]
+    recommended_learning: list[str]
+    overall_feedback: str
 
 
 class SubmitAnswerRequest(BaseModel):

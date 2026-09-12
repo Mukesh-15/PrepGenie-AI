@@ -1,102 +1,77 @@
-"""
-Report Generator Service (LLM 3)
-
-Generates a comprehensive final interview report from all evaluations.
-
-Key design decisions:
-- Receives ALL evaluations as structured data (not raw text)
-- Aggregates per-question scores into overall performance metrics (0-100 scale)
-- Identifies strong/weak areas across all questions
-- Generates actionable learning recommendations
-- Uses with_structured_output(FinalReport) for guaranteed schema
-"""
 import logging
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
-from app.schemas import FinalReport
+from app.schemas import ReportAnalysis, FinalReport
 
 logger = logging.getLogger(__name__)
 
-REPORT_GENERATOR_PROMPT = """You are an expert interview performance analyst. Generate a 
-comprehensive final interview report based on all the evaluation data provided.
+REPORT_PROMPT = """You are an expert interview performance analyst.
+Based on the interview evaluation data below, provide a written analysis.
 
-═══════════════════════════════════════════════════════════
-INTERVIEW EVALUATIONS
-═══════════════════════════════════════════════════════════
-{evaluations_text}
+DO NOT calculate or return any scores — the scores are already computed.
+Your job is ONLY to write:
+1. strong_areas — specific topics/skills where the candidate did well
+2. weak_areas — specific topics/skills where the candidate struggled
+3. recommended_learning — actionable topics to study for improvement
+4. overall_feedback — a 3-5 sentence honest and encouraging narrative summary
 
-═══════════════════════════════════════════════════════════
-INSTRUCTIONS
-═══════════════════════════════════════════════════════════
-
-Analyze ALL the evaluations above and generate a comprehensive report:
-
-1. SCORING (0-100 scale):
-   - Calculate aggregate scores by considering all individual question scores.
-   - Weight scores by question difficulty if possible.
-   - The overall_score should reflect the candidate's complete performance.
-
-2. STRONG AREAS:
-   - Identify topics/categories where the candidate consistently scored well (7+ out of 10).
-   - Be specific (e.g., "React component architecture" not just "React").
-
-3. WEAK AREAS:
-   - Identify topics where the candidate struggled (scored 5 or below).
-   - Be specific about what aspects were weak.
-
-4. RECOMMENDED LEARNING:
-   - Based on weak areas, suggest specific topics to study.
-   - Be actionable (e.g., "Database indexing and query optimization" not just "databases").
-
-5. OVERALL FEEDBACK:
-   - Write a comprehensive narrative (3-5 sentences minimum).
-   - Mention specific strengths and areas for growth.
-   - Be encouraging but honest.
-   - Reference specific questions/answers when possible."""
+INTERVIEW DATA:
+{evaluations_text}"""
 
 
 def generate_report(evaluations: list[dict]) -> FinalReport:
-    evaluations_text = ""
-    for i, eval_data in enumerate(evaluations, 1):
-        evaluations_text += f"\n{'='*50}\n"
-        evaluations_text += f"QUESTION {i}\n"
-        evaluations_text += f"{'='*50}\n"
-        evaluations_text += f"Category: {eval_data.get('category', 'N/A')}\n"
-        evaluations_text += f"Question: {eval_data.get('question', 'N/A')}\n"
-        evaluations_text += f"Answer: {eval_data.get('answer', 'N/A')}\n"
-        evaluations_text += f"Technical Score: {eval_data.get('technical_score', 'N/A')}/10\n"
-        evaluations_text += f"Communication Score: {eval_data.get('communication_score', 'N/A')}/10\n"
-        evaluations_text += f"Problem Solving Score: {eval_data.get('problem_solving_score', 'N/A')}/10\n"
-        evaluations_text += f"Overall Score: {eval_data.get('overall_score', 'N/A')}/10\n"
-        evaluations_text += f"Strengths: {', '.join(eval_data.get('strengths', []))}\n"
-        evaluations_text += f"Weaknesses: {', '.join(eval_data.get('weaknesses', []))}\n"
-        evaluations_text += f"Feedback: {eval_data.get('feedback', 'N/A')}\n"
+    n = len(evaluations)
 
-    # Build the report generation chain
-    llm = ChatOllama(
-        model=OLLAMA_MODEL,
-        base_url=OLLAMA_BASE_URL,
-        temperature=0.4
-    )
-    structured_llm = llm.with_structured_output(FinalReport)
+    # Compute all scores in Python — never let the LLM do math
+    def avg100(key):
+        return round(sum(e.get(key, 0) for e in evaluations) / n * 10)
+
+    overall_score = avg100("overall_score")
+    technical_score = avg100("technical_score")
+    communication_score = avg100("communication_score")
+    problem_solving_score = avg100("problem_solving_score")
+
+    # Format evaluations for the LLM (text-only analysis)
+    evaluations_text = ""
+    for i, e in enumerate(evaluations, 1):
+        evaluations_text += (
+            f"\n--- Question {i} ({e.get('category', 'General')}) ---\n"
+            f"Question: {e.get('question', '')}\n"
+            f"Answer: {e.get('answer', '')}\n"
+            f"Scores: Technical {e.get('technical_score')}/10, "
+            f"Communication {e.get('communication_score')}/10, "
+            f"Problem Solving {e.get('problem_solving_score')}/10\n"
+            f"Strengths: {', '.join(e.get('strengths', []))}\n"
+            f"Weaknesses: {', '.join(e.get('weaknesses', []))}\n"
+            f"Feedback: {e.get('feedback', '')}\n"
+        )
+
+    # LLM only writes the text analysis — not scores
+    llm = ChatOllama(model=OLLAMA_MODEL, base_url=OLLAMA_BASE_URL, temperature=0.4)
+    structured_llm = llm.with_structured_output(ReportAnalysis)
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", REPORT_GENERATOR_PROMPT),
-        ("human", "Generate the comprehensive final interview report.")
+        ("system", REPORT_PROMPT),
+        ("human", "Generate the written analysis for this interview.")
     ])
 
-    chain = prompt | structured_llm
-
-    result = chain.invoke({
-        "evaluations_text": evaluations_text
-    })
+    analysis = (prompt | structured_llm).invoke({"evaluations_text": evaluations_text})
 
     logger.info(
-        f"Report generated - Overall: {result.overall_score}/100, "
-        f"Technical: {result.technical_score}/100, "
-        f"Communication: {result.communication_score}/100, "
-        f"Problem Solving: {result.problem_solving_score}/100"
+        f"Report generated — Overall: {overall_score}/100, "
+        f"Technical: {technical_score}/100, Communication: {communication_score}/100, "
+        f"Problem Solving: {problem_solving_score}/100"
     )
 
-    return result
+    # Merge computed scores + LLM text into final report
+    return FinalReport(
+        overall_score=overall_score,
+        technical_score=technical_score,
+        communication_score=communication_score,
+        problem_solving_score=problem_solving_score,
+        strong_areas=analysis.strong_areas,
+        weak_areas=analysis.weak_areas,
+        recommended_learning=analysis.recommended_learning,
+        overall_feedback=analysis.overall_feedback,
+    )
