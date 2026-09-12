@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import EvaluationCard from './EvaluationCard';
+
+const API = 'http://localhost:8000';
 
 export default function InterviewSession({ interviewData, onGenerateReport }) {
   const { interviewId, resumeFileName } = interviewData;
@@ -12,15 +13,22 @@ export default function InterviewSession({ interviewData, onGenerateReport }) {
   const [qCount, setQCount] = useState(0);
   const [error, setError] = useState(null);
 
+  // useEffect with empty deps runs once — StrictMode removed so no double-fire
   useEffect(() => { fetchNext(); }, []);
 
   const fetchNext = async () => {
     setLoadingQ(true); setEvaluation(null); setAnswer(''); setError(null);
     try {
-      const res = await axios.post(`/api/interviews/${interviewId}/question`);
-      setCurrentQuestion(res.data); setQCount(c => c + 1);
-    } catch (e) { setError(e.response?.data?.detail || 'Failed to generate question'); }
-    finally { setLoadingQ(false); }
+      const res = await fetch(`${API}/api/interviews/${interviewId}/question`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to generate question');
+      setCurrentQuestion(data);
+      setQCount(c => c + 1);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoadingQ(false);
+    }
   };
 
   const submitAnswer = async (e) => {
@@ -28,10 +36,19 @@ export default function InterviewSession({ interviewData, onGenerateReport }) {
     if (!answer.trim()) return;
     setSubmitting(true); setError(null);
     try {
-      const res = await axios.post(`/api/interviews/${interviewId}/answer`, { questionId: currentQuestion.questionId, answer: answer.trim() });
-      setEvaluation(res.data);
-    } catch (e) { setError(e.response?.data?.detail || 'Failed to evaluate answer'); }
-    finally { setSubmitting(false); }
+      const res = await fetch(`${API}/api/interviews/${interviewId}/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId: currentQuestion.questionId, answer: answer.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to evaluate answer');
+      setEvaluation(data);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const diffBadge = (d) => {
@@ -43,7 +60,6 @@ export default function InterviewSession({ interviewData, onGenerateReport }) {
 
   return (
     <div style={{ padding: '24px 0 48px' }}>
-
       {/* Top bar */}
       <div className="card" style={{ padding: '12px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 13, color: '#374151', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>
@@ -78,8 +94,7 @@ export default function InterviewSession({ interviewData, onGenerateReport }) {
 
       {/* Question card */}
       {!loadingQ && currentQuestion && (
-        <div className="card" style={{ padding: '24px', boxShadow: '0 4px 16px rgba(249,115,22,0.08)', marginBottom: 16 }}>
-          {/* Meta row */}
+        <div className="card" style={{ padding: 24, boxShadow: '0 4px 16px rgba(249,115,22,0.08)', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span className="badge badge-orange">{currentQuestion.category || 'General'}</span>
@@ -88,12 +103,10 @@ export default function InterviewSession({ interviewData, onGenerateReport }) {
             <span style={{ fontSize: 11, color: '#9CA3AF' }}>Resume-grounded</span>
           </div>
 
-          {/* Question */}
           <p style={{ fontSize: 16, fontWeight: 600, color: '#111827', lineHeight: 1.55, marginBottom: 20 }}>
             {currentQuestion.question}
           </p>
 
-          {/* RAG context */}
           {currentQuestion.contextUsed && (
             <details style={{ marginBottom: 20 }}>
               <summary style={{ fontSize: 12, color: '#9CA3AF', cursor: 'pointer', userSelect: 'none' }}>
@@ -105,7 +118,6 @@ export default function InterviewSession({ interviewData, onGenerateReport }) {
             </details>
           )}
 
-          {/* Answer or submitted view */}
           {!evaluation ? (
             <form onSubmit={submitAnswer}>
               <textarea
@@ -140,7 +152,6 @@ export default function InterviewSession({ interviewData, onGenerateReport }) {
         </div>
       )}
 
-      {/* Evaluation */}
       {evaluation && (
         <EvaluationCard evaluation={evaluation} onNextQuestion={fetchNext} onFinishInterview={() => onGenerateReport(interviewId)} />
       )}

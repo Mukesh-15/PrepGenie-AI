@@ -3,7 +3,8 @@ import Navbar from './components/Navbar';
 import UploadResume from './components/UploadResume';
 import InterviewSession from './components/InterviewSession';
 import FinalReport from './components/FinalReport';
-import axios from 'axios';
+
+const API = 'http://localhost:8000';
 
 export default function App() {
   const [step, setStep] = useState('upload');
@@ -12,16 +13,22 @@ export default function App() {
   const [loadingReport, setLoadingReport] = useState(false);
   const [error, setError] = useState(null);
 
-  const handleReset = () => { setStep('upload'); setInterviewData(null); setReportData(null); setError(null); };
+  const handleReset = () => {
+    setStep('upload'); setInterviewData(null); setReportData(null); setError(null);
+  };
 
   const handleGenerateReport = async (interviewId) => {
     setLoadingReport(true); setError(null);
     try {
-      const res = await axios.post(`/api/interviews/${interviewId}/report`);
-      setReportData(res.data); setStep('report');
+      const res = await fetch(`${API}/api/interviews/${interviewId}/report`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to generate report');
+      setReportData(data); setStep('report');
     } catch (e) {
-      setError(e.response?.data?.detail || 'Failed to generate report');
-    } finally { setLoadingReport(false); }
+      setError(e.message);
+    } finally {
+      setLoadingReport(false);
+    }
   };
 
   return (
