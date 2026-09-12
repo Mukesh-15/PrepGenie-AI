@@ -1,7 +1,7 @@
 """
 Resume Processor Service
 
-Pipeline: PDF → Text Extraction → Chunking → Embeddings → ChromaDB
+Pipeline: PDF -> Text Extraction -> Chunking -> Embeddings -> ChromaDB
 
 Uses:
 - PyPDFLoader for PDF text extraction
