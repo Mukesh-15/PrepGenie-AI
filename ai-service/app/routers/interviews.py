@@ -3,7 +3,7 @@ import tempfile
 import logging
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.schemas import SubmitAnswerRequest
-from app.store import store
+from app import store
 from app.services.resume_processor import process_resume
 from app.services.question_generator import generate_question
 from app.services.answer_evaluator import evaluate_answer

@@ -12,3 +12,4 @@ chromadb
 pypdf
 pydantic>=2.0
 python-dotenv
+redis

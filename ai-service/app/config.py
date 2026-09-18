@@ -17,5 +17,9 @@ CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
 # Embedding model (local HuggingFace)
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
+# Redis
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+SESSION_TTL = int(os.getenv("SESSION_TTL", "86400"))  # 24 hours in seconds
+
 # Server
 AI_SERVICE_PORT = int(os.getenv("AI_SERVICE_PORT", "8000"))
