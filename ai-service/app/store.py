@@ -1,7 +1,6 @@
 """
 Redis-backed Interview Store
 
-Replaces the old in-memory dict with Redis.
 Each interview session is stored as a JSON string under the key:
     interview:{interview_id}
 
@@ -12,8 +11,6 @@ Pattern used everywhere:
     1. Read  → r.get(key) → json.loads
     2. Modify → change the dict in Python
     3. Write back → r.setex(key, TTL, json.dumps)
-
-No threading.Lock needed — Redis handles concurrency on its side.
 """
 
 import json
